@@ -1,0 +1,225 @@
+%title: SQL::Tiny V 0.02
+%author: James Edwards
+%date: 2019-04-09
+
+-> Slide 1 <-
+=========
+
+Andy Lester (perlbuzz.com) recently announced SQL::Tiny
+   [Announcing SQL::Tiny](https://perlbuzz.com/2019/03/10/announcing-sql-tiny/) V 0.01
+In my (Andy) test suites, I have a lot of ad hoc SQL queries, and it drives me nuts
+to have so much SQL code lying around. SQL::Tiny is for generating SQL code for
+simple cases.
+
+    my $sql =
+        'INSERT INTO users (name,salary,phone,status,dateadded) '.
+        'VALUES (:name,:status,NULL,:salary,SYSDATE())';
+    my $binds = {
+        ':name'      => 'Dave',        ':salary'    => 50000,
+        ':status'    => 'Active',      ':dateadded' => \'SYSDATE()',
+    };
+
+or even the positional:
+
+    my $sql =
+        'INSERT INTO users (name,salary,phone,status,dateadded) '.
+        'VALUES (?,?,NULL,?,SYSDATE())';
+    my $binds = [ 'Dave', 50000, 'Active' ];
+
+-------------------------------------------------
+
+-> # Announcement Continue : Slide 2 <-
+
+  *DOCUMENTATION*
+
+A very simple SQL-building library. It's not for all your SQL needs, only
+the very simple ones.
+
+It doesn't handle JOINs. It doesn't handle *GROUP BY*. It doesn't handle
+subselects. It's only for simple SQL.
+
+...
+
+The trade-off for that brevity of code is that SQL::Tiny has to make new SQL
+and binds from the input every time. You can't cache the SQL that comes back
+from SQL::Tiny because the placeholders could vary depending on what the input
+data is. Therefore, you don't want to use SQL::Tiny where speed is essential.
+
+The other trade-off is that SQL::Tiny handles only very simple code. It won't
+handle JOINs of any kind.
+
+SQL::Tiny isn't meant for all of your SQL needs, only the simple ones that you
+do over and over.
+
+-------------------------------------------------
+
+-> # SQL::Tiny The Code : Slide 3 <-
+
+    use SQL::Tiny ':all';
+    
+    my ($sql,$bind);
+    
+    ($sql,$bind) = sql_insert( $table, \%values );
+    
+    ($sql,$bind) = sql_select( $table, \@columns, \%where [, \%other ] );
+    
+    ($sql,$bind) = sql_update( $table, \%values, \%where );
+    
+    ($sql,$bind) = sql_delete( $table, \%where );
+
+-------------------------------------------------
+
+-> # RDMBS : Slide 4 <-
+
+Going to use C.J. Date's supplier-parts database's *supplier* table in this
+presentation
+
+sid  sname  status  city
+---  -----  ------  ------
+S1   Smith      20  London
+S2   Jones      10  Paris
+S3   Blake      30  Paris
+S4   Clark      20  London
+S5   Adams      30  Athens
+
+CREATE TABLE supplier ( sid    varchar(5)  NOT NULL primary key,
+                        sname  varchar(10) NOT NULL,
+                        status int         NOT NULL,
+                        city   varchar(10) NOT NULL);
+
+
+-------------------------------------------------
+
+-> # SQL::Tiny : Code Template : Slide 5 <-
+
+ *sqlite3*
+
+    #!/usr/bin/env perl
+    use strict; use warnings; use feature 'say'; use Carp 'croak';
+    
+    use DBI;
+    use SQL::Tiny ':all';
+    
+    my ($dbname, $user, $pword, $sth) = ('cjdate.db', '', '',);
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$dbname", $user, $pword,
+        { sqlite_unicode => 1, AutoCommit => 1, PrintWarn          => 1,
+          PrintError     => 0, RaiseError => 1, ShowErrorStatement => 1, },) or
+        croak "failed to connect to MySQL database:$DBI::errstr()";
+    
+    ...
+    
+    $sth->finish();
+    $dbh->disconnect();
+    exit(0);
+
+-------------------------------------------------
+
+-> # SQL::Tiny : Insert : Slide 6 <-
+
+    my ($sql,$binds) = sql_insert(
+        'supplier',                             # table
+        {
+            sid     => 'S1',                    # values
+            sname   => 'Smith',
+            status  => 20,
+            city    => 'London',
+        }
+    );
+    $sth = $dbh->prepare($sql);
+    $sth->execute(@$binds);
+
+-------------------------------------------------
+
+-> # SQL::Tiny : Select : Slide 7 <-
+
+    my ($sql,$binds) = sql_select(
+        'supplier',               # table
+        [qw( sid sname )],        # columns
+        { status => '30' },       # where
+        { order_by => 'sname' },  # can contain *group_by* and order_by.
+        );                        # Wait!! Your documentation says no 'GROUP BY'!
+                                  # Conflict within doc in V 0.02
+    
+    $sth = $dbh->prepare($sql);
+    $sth->execute(@$binds);
+    
+    my ($sid, $sname);
+    $sth->bind_col( 1, \$sid);
+    $sth->bind_col( 2, \$sname);
+    
+    while ($sth->fetch) {
+        say "$sid--$sname";
+    }
+====
+*group_by* does NOT cause an error in SQL::Tiny V 0.02
+  DB<3> x $sql
+
+   [0] "SELECT sid,sname FROM supplier WHERE status=? GROUP BY sname"
+
+-------------------------------------------------
+
+-> # SQL::Tiny : Update : Slide 8 <-
+
+    my ($sql,$binds) = sql_update(
+        'supplier',                 # Table
+        {
+            status     => 5,        # values
+        },
+        {
+            sname => 'Clark',       # where
+        },
+    );
+    $sth = $dbh->prepare($sql);
+    $sth->execute(@$binds);
+    say "Rows effected ", $sth->rows;
+
+-------------------------------------------------
+
+-> # SQL::Tiny : Delete : Slide 9 <-
+
+    my ($sql,$binds) = sql_delete(
+        'supplier',                # table
+        { 
+            sname   => 'Clark',    # where
+        },
+    );
+    
+    $sth = $dbh->prepare($sql);
+    $sth->execute(@$binds);
+    say "Rows effected ", $sth->rows;
+
+-------------------------------------------------
+
+-> # Code Archive : Slide 10 <-
+
+Complete archive will be on the MadMongers' github page
+    [MadMongers/04-2019-SQL-Tiny](https://github.com/MadMongers/04-2019-SQL-Tiny)
+
+   Play with sample programs:
+   1) SQL::Tiny
+   2) DBI->connect() options
+   3) Capturing errors
+        eval/Try::Tiny
+   4) Read Tim Bunce's [Advance Perl DBI](https://www.cpan.org/authors/id/T/TI/TIMB/DBI_AdvancedTalk_200708.pdf)
+   5) brian d foy's [Use DBI_TRACE to follow DBI’s work](https://www.effectiveperlprogramming.com/2010/04/use-dbi_trace-to-follow-dbis-work/)
+   6) EasySoft's [Debugging Perl DBI](https://www.easysoft.com/developer/languages/perl/dbi-debugging.html)
+   7) Ovid's [Better SQL tracing with DBIx::Class](http://blogs.perl.org/users/ovid/2017/04/better-sql-tracing-with-dbixclass.html)
+        For filtering DBI_TRACE output
+
+-------------------------------------------------
+
+-> The End. Qs <-
+
+
+1) Purchase Mr. Andy Lester's Book
+     Pro Perl Debugging: Apress
+
+My Professional Bull Riders flack jacket sponsors are:     ;-)
+
+   [The Game Crafter](https://www.thegamecrafter.com)       Make your *dream* Board Game come TRUE
+
+   [Table Top Events](https://tabletop.events)       Your *next* Convention Management System (in the cloud)
+                                          Coming soon with AI BlockChain (  ;-)  )**2
+
+   [Twit.tv](https://twit.tv)                If it has a chip in it, we'll be talking about it
+
