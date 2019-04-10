@@ -8,7 +8,7 @@ my ($dbname, $user, $pword, $sth) = ('cjdate.db', '', '',);
 my $dbh = DBI->connect("dbi:SQLite:dbname=$dbname", $user, $pword,
     { sqlite_unicode => 1, AutoCommit => 1, PrintWarn          => 1,
       PrintError     => 0, RaiseError => 1, ShowErrorStatement => 1, },) or
-    croak "failed to connect to MySQL database:DBI->errstr()";
+    croak "failed to connect to SQLite3 database:DBI->errstr()";
 
 my ($sql,$binds) = sql_select(
     'supplier',               # table

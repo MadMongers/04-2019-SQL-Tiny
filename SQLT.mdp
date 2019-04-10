@@ -16,7 +16,7 @@ simple cases.
         'VALUES (:name,:status,NULL,:salary,SYSDATE())';
     my $binds = {
         ':name'      => 'Dave',        ':salary'    => 50000,
-        ':status'    => 'Active',      ':dateadded' => \'SYSDATE()',
+        ':status'    => 'Active',      ':dateadded' => 'SYSDATE()',
     };
 
 or even the positional:
@@ -104,7 +104,7 @@ CREATE TABLE supplier ( sid    varchar(5)  NOT NULL primary key,
     my $dbh = DBI->connect("dbi:SQLite:dbname=$dbname", $user, $pword,
         { sqlite_unicode => 1, AutoCommit => 1, PrintWarn          => 1,
           PrintError     => 0, RaiseError => 1, ShowErrorStatement => 1, },) or
-        croak "failed to connect to MySQL database:$DBI::errstr()";
+        croak "failed to connect to SQLite3 database:$DBI::errstr()";
     
     ...
     

@@ -23,5 +23,3 @@ Sample programs
 ├── select.v2.pl
 ├── SQLT.mdp
 └── update.pl
-
-0 directories, 10 files
