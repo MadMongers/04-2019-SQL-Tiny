@@ -147,7 +147,7 @@ CREATE TABLE supplier ( sid    varchar(5)  NOT NULL primary key,
     $sth->bind_col( 1, \$sid);
     $sth->bind_col( 2, \$sname);
     
-    while ($sth->fetch) {
+    while ($sth->fetchrow_arrayref) {
         say "$sid--$sname";
     }
 ====
